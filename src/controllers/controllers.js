@@ -1,6 +1,5 @@
 "use strict";
 const passport = require("passport");
-const dayjs = require("dayjs");
 const dao = require("../database/dao");
 const utils = require("../utils/utils");
 
