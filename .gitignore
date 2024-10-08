@@ -1,0 +1,10 @@
+# dependencies
+/node_modules
+coverage/
+
+# misc
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+.env
