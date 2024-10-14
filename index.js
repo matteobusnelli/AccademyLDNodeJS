@@ -1,6 +1,7 @@
 "use strict";
 
 const express = require("express");
+require("dotenv").config();
 const security = require("./src/security/security");
 const controllers = require("./src/controllers/controllers");
 const passport = require("passport");
@@ -15,7 +16,7 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(security.DeserializeUser);
 
 const app = express();
-const port = 3001;
+const port = process.env.SERVER_PORT;
 app.use(express.json());
 
 app.use(
