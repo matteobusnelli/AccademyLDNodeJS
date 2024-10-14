@@ -53,11 +53,21 @@ exports.newStudentHandler = async (req, res) => {
 };
 exports.getStudentByIdHandler = async (req, res) => {
   try {
+    const tokenString = req.headers.authorization.split("Bearer ")[1]; // Already checked by middleware
+    const userType = await security.verifyToken(tokenString); // Already checked by middleware
     const studentId = req.params.student_id;
     if (!studentId) {
       return res.status(400).send("Error - student_id is a mandatory field");
     }
-
+    if (userType === "student") {
+      const studentIdToken = await security.getIdFromToken(tokenString);
+      if (!studentIdToken) {
+        return res.status(500).send("Failed to extract student ID");
+      }
+      if (studentId != studentIdToken) {
+        return res.status(401).send("You cannot read another student's data");
+      }
+    }
     const student = await dao.getStudentById(studentId);
     if (!student) {
       return res
@@ -207,11 +217,21 @@ exports.newProfessorHandler = async (req, res) => {
 };
 exports.getProfessorByIdHandler = async (req, res) => {
   try {
+    const tokenString = req.headers.authorization.split("Bearer ")[1]; // Already checked by middleware
+    const userType = await security.verifyToken(tokenString); // Already checked by middleware
     const professorId = req.params.professor_id;
     if (!professorId) {
       return res.status(400).send("Error - professor_id is a mandatory field");
     }
-
+    if (userType === "professor") {
+      const professorIdToken = await security.getIdFromToken(tokenString);
+      if (!professorIdToken) {
+        return res.status(500).send("Failed to extract professor ID");
+      }
+      if (professorId != professorIdToken) {
+        return res.status(401).send("You cannot read another professor's data");
+      }
+    }
     const professor = await dao.getProfessorById(professorId);
     if (!professor) {
       return res
@@ -482,12 +502,22 @@ exports.assignStudentResultHandler = async (req, res) => {
   });
 };
 exports.getStudentResultsHandler = async (req, res) => {
+  const tokenString = req.headers.authorization.split("Bearer ")[1]; // Already checked by middleware
+  const userType = await security.verifyToken(tokenString); // Already checked by middleware
   const studentId = req.params.student_id;
 
   if (!studentId) {
     return res.status(400).send("Error - student_id is a mandatory field");
   }
-
+  if (userType === "student") {
+    const studentIdToken = await security.getIdFromToken(tokenString);
+    if (!studentIdToken) {
+      return res.status(500).send("Failed to extract student ID");
+    }
+    if (studentId != studentIdToken) {
+      return res.status(401).send("You cannot read other students' results");
+    }
+  }
   try {
     const studentResults = await dao.getStudentResults(studentId);
     res.header("Content-Type", "application/json");

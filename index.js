@@ -40,7 +40,7 @@ app.post("/student", middlewares.isAdmin, controllers.newStudentHandler);
 //endpoint to get a student by its id
 app.get(
   "/student/:student_id",
-  middlewares.isAdmin,
+  middlewares.isAdminOrProfessorOrStudent,
   controllers.getStudentByIdHandler
 );
 
@@ -74,7 +74,7 @@ app.post("/professor", middlewares.isAdmin, controllers.newProfessorHandler);
 //endpoint to get a professor by its id
 app.get(
   "/professor/:professor_id",
-  middlewares.isAdmin,
+  middlewares.isAdminOrProfessor,
   controllers.getProfessorByIdHandler
 );
 
@@ -133,7 +133,7 @@ app.put(
 //endpoint to let a student to get the list of its results
 app.get(
   "/getstudentresults/:student_id",
-  middlewares.isAdminOrStudent,
+  middlewares.isAdminOrProfessorOrStudent,
   controllers.getStudentResultsHandler
 );
 
