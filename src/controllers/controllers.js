@@ -45,9 +45,7 @@ exports.newStudentHandler = async (req, res) => {
     }
 
     await dao.createStudent(stud);
-    res
-      .status(201)
-      .json({ message: `Student ${stud.student_id} stored successfully` });
+    res.status(201).json(stud);
   } catch (err) {
     res.status(500).send(`Error - ${err.message}`);
   }
