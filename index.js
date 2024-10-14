@@ -33,8 +33,109 @@ app.use(passport.session());
 
 //endpoint to handle login
 app.post("/login", controllers.loginHandler);
+
 //endpoint to store a student
 app.post("/student", middlewares.isAdmin, controllers.newStudentHandler);
+
+//endpoint to get a student by its id
+app.get(
+  "/student/:student_id",
+  middlewares.isAdmin,
+  controllers.getStudentByIdHandler
+);
+
+//endpoint to get all students for admin only
+app.get("/students", middlewares.isAdmin, controllers.getAllStudentsHandler);
+
+//endpoint to get all students for professors (return all students enrolled in professor's courses)
+app.get(
+  "/professorstudents",
+  middlewares.isAdminOrProfessor,
+  controllers.getAllProfessorStudentsHandler
+);
+
+//endpoint to store a student
+app.post(
+  "/enrollstudent",
+  middlewares.isAdmin,
+  controllers.enrollStudentToCourseHandler
+);
+
+//endpoint to delete a student in base of its id
+app.delete(
+  "/student/:student_id",
+  middlewares.isAdmin,
+  controllers.deleteStudentByIdHandler
+);
+
+//endpoint to store a professor
+app.post("/professor", middlewares.isAdmin, controllers.newProfessorHandler);
+
+//endpoint to get a professor by its id
+app.get(
+  "/professor/:professor_id",
+  middlewares.isAdmin,
+  controllers.getProfessorByIdHandler
+);
+
+//endpoint to get all professors
+app.get(
+  "/professors",
+  middlewares.isAdmin,
+  controllers.getAllProfessorsHandler
+);
+
+//endpoint to delete a professor in base of its id
+app.delete(
+  "/professor/:professor_id",
+  middlewares.isAdmin,
+  controllers.deleteProfessorByIdHandler
+);
+
+//endpoint to store a course
+app.post("/course", middlewares.isAdmin, controllers.newCourseHandler);
+
+//endpoint to get a course by its id
+app.get(
+  "/course/:course_id",
+  middlewares.isAdminOrProfessorOrStudent,
+  controllers.getCourseByIdHandler
+);
+
+//endpoint to get all courses
+app.get(
+  "/courses",
+  middlewares.isAdminOrProfessorOrStudent,
+  controllers.getAllCoursesHandler
+);
+
+//endpoint to delete a course in base of its id
+app.delete(
+  "/course/:course_id",
+  middlewares.isAdmin,
+  controllers.deleteCourseByIdHandler
+);
+
+//endpoint to assign a professor to a specific course
+app.put(
+  "/assignprofessor",
+  middlewares.isAdmin,
+  controllers.assignProfessorToCourseHandler
+);
+
+//endpoint to let a professor to assign a new valuation to a student
+app.put(
+  "/assignstudentresult",
+  middlewares.isAdminOrProfessor,
+  controllers.assignStudentResultHandler
+);
+
+//endpoint to let a student to get the list of its results
+app.get(
+  "/getstudentresults/:student_id",
+  middlewares.isAdminOrStudent,
+  controllers.getStudentResultsHandler
+);
 
 // Activate the server
 app.listen(port, () => {

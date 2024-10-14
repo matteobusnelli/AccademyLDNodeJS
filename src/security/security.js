@@ -72,3 +72,17 @@ exports.DeserializeUser = (id, done) => {
       done(err, null);
     });
 };
+exports.getIdFromToken = (tokenString) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(tokenString, secretKey, (err, decoded) => {
+      if (err) {
+        return reject(err);
+      }
+      if (decoded && decoded.username) {
+        return resolve(decoded.username);
+      } else {
+        return reject(new Error("Invalid token"));
+      }
+    });
+  });
+};
