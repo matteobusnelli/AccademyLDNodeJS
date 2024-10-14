@@ -29,10 +29,11 @@ exports.verifyToken = (tokenString) => {
   });
 };
 exports.LoginUser = (username, password, done) => {
-  dao.FetchUserFromDB(username, password).then((user) => {
+  dao.fetchUserFromDB(username, password).then((user) => {
     if (!user) {
       return done(null, false, {
         error: "User not found.",
+        status: 404,
       });
     }
     const salt = user.salt;
@@ -45,6 +46,7 @@ exports.LoginUser = (username, password, done) => {
     if (hash !== user.hashpassword)
       return done(null, false, {
         error: "Incorrect username and/or password.",
+        status: 401,
       });
 
     this.CreateToken(user.username, user.type)
@@ -64,7 +66,7 @@ exports.LoginUser = (username, password, done) => {
 
 exports.DeserializeUser = (id, done) => {
   dao
-    .FetchUserFromDB(id)
+    .fetchUserFromDB(id)
     .then((user) => {
       done(null, user);
     })
@@ -85,4 +87,11 @@ exports.getIdFromToken = (tokenString) => {
       }
     });
   });
+};
+exports.generateSalt = () => {
+  return crypto.randomBytes(16).toString("hex");
+};
+exports.hashPassword = (password, salt) => {
+  const saltedPassword = password + salt;
+  return crypto.createHash("sha256").update(saltedPassword).digest("hex");
 };

@@ -4,11 +4,50 @@ const dao = require("../database/dao");
 const utils = require("../utils/utils");
 const security = require("../security/security");
 
+exports.registrationHandler = async (req, res) => {
+  const { username, password, type } = req.body;
+
+  if (!username || !password || !type) {
+    return res.status(400).json({ error: "Invalid user format provided" });
+  }
+
+  try {
+    const existingUser = await dao.fetchUserFromDB(username);
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ error: `Error - user ${username} already exists` });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to check user existence" });
+  }
+
+  if (type !== "student" && type !== "professor") {
+    return res.status(400).json({ error: "Invalid user type provided" });
+  }
+
+  const salt = security.generateSalt();
+  const hashedPassword = security.hashPassword(password, salt);
+
+  try {
+    await dao.insertUserIntoDB(username, hashedPassword, salt, type);
+
+    const response = {
+      username,
+      type,
+    };
+
+    res.status(201).json(response);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to register user" });
+  }
+};
+
 exports.loginHandler = (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
     if (err) return next(err);
     if (!user) {
-      return res.status(401).json(info);
+      return res.status(info.status).json({ error: info.error });
     }
     req.login(user, (err) => {
       if (err) return next(err);
@@ -22,33 +61,39 @@ exports.newStudentHandler = async (req, res) => {
   try {
     const stud = req.body;
     if (!stud.student_id) {
-      return res.status(400).send("Error - student_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - student_id is a mandatory field" });
     }
     if (!stud.name) {
-      return res.status(400).send("Error - name is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - name is a mandatory field" });
     }
     if (!stud.surname) {
-      return res.status(400).send("Error - surname is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - surname is a mandatory field" });
     }
     if (stud.birth_date) {
       if (!utils.isValidDateFormat(stud.birth_date)) {
         return res
           .status(400)
-          .send("Invalid birth_date format, must be YYYY-MM-DD");
+          .json({ error: "Invalid birth_date format, must be YYYY-MM-DD" });
       }
     }
 
     const found = await dao.isStudentRegistered(stud.student_id);
     if (found) {
-      return res
-        .status(409)
-        .send(`Error - student with id ${stud.student_id} already exists`);
+      return res.status(409).json({
+        error: `Error - student with id ${stud.student_id} already exists`,
+      });
     }
 
     await dao.createStudent(stud);
     res.status(201).json(stud);
   } catch (err) {
-    res.status(500).send(`Error - ${err.message}`);
+    res.status(500).json({ error: `Error - ${err.message}` });
   }
 };
 exports.getStudentByIdHandler = async (req, res) => {
@@ -57,27 +102,31 @@ exports.getStudentByIdHandler = async (req, res) => {
     const userType = await security.verifyToken(tokenString); // Already checked by middleware
     const studentId = req.params.student_id;
     if (!studentId) {
-      return res.status(400).send("Error - student_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - student_id is a mandatory field" });
     }
     if (userType === "student") {
       const studentIdToken = await security.getIdFromToken(tokenString);
       if (!studentIdToken) {
-        return res.status(500).send("Failed to extract student ID");
+        return res.status(500).json({ error: "Failed to extract student ID" });
       }
       if (studentId != studentIdToken) {
-        return res.status(401).send("You cannot read another student's data");
+        return res
+          .status(401)
+          .json({ error: "You cannot read another student's data" });
       }
     }
     const student = await dao.getStudentById(studentId);
     if (!student) {
       return res
         .status(404)
-        .send(`Error - student with id ${studentId} does not exist`);
+        .json({ error: `Error - student with id ${studentId} does not exist` });
     }
 
     res.status(200).json(student);
   } catch (err) {
-    res.status(500).send("Failed to retrieve student");
+    res.status(500).json({ error: "Failed to retrieve student" });
   }
 };
 exports.getAllStudentsHandler = async (req, res) => {
@@ -85,7 +134,7 @@ exports.getAllStudentsHandler = async (req, res) => {
     const students = await dao.fetchStudents();
     res.status(200).json(students);
   } catch (err) {
-    res.status(500).send("Failed to retrieve student");
+    res.status(500).json({ error: "Failed to retrieve student" });
   }
 };
 exports.getAllProfessorStudentsHandler = async (req, res) => {
@@ -97,7 +146,9 @@ exports.getAllProfessorStudentsHandler = async (req, res) => {
     if (userType === "professor") {
       const professorId = await security.getIdFromToken(tokenString);
       if (!professorId) {
-        return res.status(500).send("Failed to extract professor ID");
+        return res
+          .status(500)
+          .json({ error: "Failed to extract professor ID" });
       }
       students = await dao.fetchProfessorStudents(professorId);
     } else {
@@ -107,7 +158,7 @@ exports.getAllProfessorStudentsHandler = async (req, res) => {
     res.status(200).json(students);
   } catch (err) {
     console.error("Error retrieving students:", err);
-    res.status(500).send("Failed to retrieve students");
+    res.status(500).json({ error: "Failed to retrieve students" });
   }
 };
 exports.enrollStudentToCourseHandler = async (req, res) => {
@@ -115,26 +166,30 @@ exports.enrollStudentToCourseHandler = async (req, res) => {
     const studCour = req.body;
 
     if (!studCour.student_id) {
-      return res.status(400).send("Error - student_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - student_id is a mandatory field" });
     }
     if (!studCour.course_id) {
-      return res.status(400).send("Error - course_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - course_id is a mandatory field" });
     }
 
     const isStudentRegistered = await dao.isStudentRegistered(
       studCour.student_id
     );
     if (!isStudentRegistered) {
-      return res
-        .status(404)
-        .send(`Error - student with id ${studCour.student_id} not found`);
+      return res.status(404).json({
+        error: `Error - student with id ${studCour.student_id} not found`,
+      });
     }
 
     const isCourseRegistered = await dao.isCourseRegistered(studCour.course_id);
     if (!isCourseRegistered) {
-      return res
-        .status(404)
-        .send(`Error - course with id ${studCour.course_id} not found`);
+      return res.status(404).json({
+        error: `Error - course with id ${studCour.course_id} not found`,
+      });
     }
 
     const isEnrolled = await dao.isStudentEnrolledToCourse(
@@ -142,11 +197,9 @@ exports.enrollStudentToCourseHandler = async (req, res) => {
       studCour.course_id
     );
     if (isEnrolled) {
-      return res
-        .status(409)
-        .send(
-          `Error - student ${studCour.student_id} is already enrolled in course ${studCour.course_id}`
-        );
+      return res.status(409).json({
+        error: `Error - student ${studCour.student_id} is already enrolled in course ${studCour.course_id}`,
+      });
     }
 
     await dao.enrollStudentToCourse(studCour);
@@ -155,7 +208,7 @@ exports.enrollStudentToCourseHandler = async (req, res) => {
     });
   } catch (err) {
     console.error("Error enrolling student to course:", err);
-    res.status(500).send(`Failed to enroll student: ${err.message}`);
+    res.status(500).json({ error: `Failed to enroll student: ${err.message}` });
   }
 };
 exports.deleteStudentByIdHandler = async (req, res) => {
@@ -166,14 +219,16 @@ exports.deleteStudentByIdHandler = async (req, res) => {
     if (!found) {
       return res
         .status(404)
-        .send(`Error - student with id ${studentId} not found`);
+        .json({ error: `Error - student with id ${studentId} not found` });
     }
     await dao.deleteStudent(studentId);
 
-    res.status(200).send(`Student with ID ${studentId} deleted successfully`);
+    res
+      .status(200)
+      .json({ message: `Student with ID ${studentId} deleted successfully` });
   } catch (err) {
     console.error("Error deleting student:", err);
-    res.status(500).send(`Error - ${err.message}`);
+    res.status(500).json({ error: `Error - ${err.message}` });
   }
 };
 exports.newProfessorHandler = async (req, res) => {
@@ -181,22 +236,30 @@ exports.newProfessorHandler = async (req, res) => {
     const prof = req.body;
 
     if (!prof.professor_id) {
-      return res.status(400).send("Error - professor_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - professor_id is a mandatory field" });
     }
     if (!prof.name) {
-      return res.status(400).send("Error - name is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - name is a mandatory field" });
     }
     if (!prof.surname) {
-      return res.status(400).send("Error - surname is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - surname is a mandatory field" });
     }
     if (prof.salary && prof.salary <= 0) {
-      return res.status(400).send("Error - salary must be a positive value");
+      return res
+        .status(400)
+        .json({ error: "Error - salary must be a positive value" });
     }
     if (prof.hire_date) {
       if (!utils.isValidDateFormat(prof.hire_date)) {
         return res
           .status(400)
-          .send("Invalid hire_date format, must be YYYY-MM-DD");
+          .json({ error: "Invalid hire_date format, must be YYYY-MM-DD" });
       }
     }
 
@@ -204,7 +267,9 @@ exports.newProfessorHandler = async (req, res) => {
     if (found) {
       return res
         .status(409)
-        .send(`Error - professor with id ${prof.professor_id} already exists`);
+        .json({
+          error: `Error - professor with id ${prof.professor_id} already exists`,
+        });
     }
 
     const createdProfessor = await dao.createProfessor(prof);
@@ -212,7 +277,9 @@ exports.newProfessorHandler = async (req, res) => {
     res.status(201).json(createdProfessor);
   } catch (err) {
     console.error("Error creating professor:", err);
-    res.status(500).send(`Failed to insert professor: ${err.message}`);
+    res
+      .status(500)
+      .json({ error: `Failed to insert professor: ${err.message}` });
   }
 };
 exports.getProfessorByIdHandler = async (req, res) => {
@@ -221,27 +288,35 @@ exports.getProfessorByIdHandler = async (req, res) => {
     const userType = await security.verifyToken(tokenString); // Already checked by middleware
     const professorId = req.params.professor_id;
     if (!professorId) {
-      return res.status(400).send("Error - professor_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - professor_id is a mandatory field" });
     }
     if (userType === "professor") {
       const professorIdToken = await security.getIdFromToken(tokenString);
       if (!professorIdToken) {
-        return res.status(500).send("Failed to extract professor ID");
+        return res
+          .status(500)
+          .json({ error: "Failed to extract professor ID" });
       }
       if (professorId != professorIdToken) {
-        return res.status(401).send("You cannot read another professor's data");
+        return res
+          .status(401)
+          .json({ error: "You cannot read another professor's data" });
       }
     }
     const professor = await dao.getProfessorById(professorId);
     if (!professor) {
       return res
         .status(404)
-        .send(`Error - professor with id ${professorId} does not exist`);
+        .json({
+          error: `Error - professor with id ${professorId} does not exist`,
+        });
     }
 
     res.status(200).json(professor);
   } catch (err) {
-    res.status(500).send("Failed to retrieve professor");
+    res.status(500).json({ error: "Failed to retrieve professor" });
   }
 };
 exports.getAllProfessorsHandler = async (req, res) => {
@@ -249,7 +324,7 @@ exports.getAllProfessorsHandler = async (req, res) => {
     const professors = await dao.fetchProfessors();
     res.status(200).json(professors);
   } catch (err) {
-    res.status(500).send("Failed to retrieve professors");
+    res.status(500).json({ error: "Failed to retrieve professors" });
   }
 };
 exports.deleteProfessorByIdHandler = async (req, res) => {
@@ -260,16 +335,16 @@ exports.deleteProfessorByIdHandler = async (req, res) => {
     if (!found) {
       return res
         .status(404)
-        .send(`Error - professor with id ${professorId} not found`);
+        .json({ error: `Error - professor with id ${professorId} not found` });
     }
     await dao.deleteProfessor(professorId);
 
-    res
-      .status(200)
-      .send(`Professor with ID ${professorId} deleted successfully`);
+    res.status(200).json({
+      message: `Professor with ID ${professorId} deleted successfully`,
+    });
   } catch (err) {
     console.error("Error deleting professor:", err);
-    res.status(500).send(`Error - ${err.message}`);
+    res.status(500).json({ error: `Error - ${err.message}` });
   }
 };
 exports.newCourseHandler = async (req, res) => {
@@ -277,17 +352,23 @@ exports.newCourseHandler = async (req, res) => {
     const course = req.body;
 
     if (!course.course_id) {
-      return res.status(400).send("Error - course_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - course_id is a mandatory field" });
     }
     if (!course.name) {
-      return res.status(400).send("Error - name is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - name is a mandatory field" });
     }
 
     const found = await dao.isCourseRegistered(course.course_id);
     if (found) {
       return res
         .status(409)
-        .send(`Error - course with id ${course.course_id} already exists`);
+        .json({
+          error: `Error - course with id ${course.course_id} already exists`,
+        });
     }
 
     const createdCourse = await dao.createCourse(course);
@@ -295,26 +376,28 @@ exports.newCourseHandler = async (req, res) => {
     res.status(201).json(createdCourse);
   } catch (err) {
     console.error("Error creating course:", err);
-    res.status(500).send(`Failed to insert course: ${err.message}`);
+    res.status(500).json({ error: `Failed to insert course: ${err.message}` });
   }
 };
 exports.getCourseByIdHandler = async (req, res) => {
   try {
     const courseId = req.params.course_id;
     if (!courseId) {
-      return res.status(400).send("Error - course_id is a mandatory field");
+      return res
+        .status(400)
+        .json({ error: "Error - course_id is a mandatory field" });
     }
 
     const course = await dao.getCourseById(courseId);
     if (!course) {
       return res
         .status(404)
-        .send(`Error - course with id ${courseId} does not exist`);
+        .json({ error: `Error - course with id ${courseId} does not exist` });
     }
 
     res.status(200).json(course);
   } catch (err) {
-    res.status(500).send("Failed to retrieve course");
+    res.status(500).json({ error: "Failed to retrieve course" });
   }
 };
 exports.getAllCoursesHandler = async (req, res) => {
@@ -322,7 +405,7 @@ exports.getAllCoursesHandler = async (req, res) => {
     const courses = await dao.fetchCourses();
     res.status(200).json(courses);
   } catch (err) {
-    res.status(500).send("Failed to retrieve courses");
+    res.status(500).json({ error: "Failed to retrieve courses" });
   }
 };
 exports.deleteCourseByIdHandler = async (req, res) => {
@@ -333,14 +416,16 @@ exports.deleteCourseByIdHandler = async (req, res) => {
     if (!found) {
       return res
         .status(404)
-        .send(`Error - course with id ${courseId} not found`);
+        .json({ error: `Error - course with id ${courseId} not found` });
     }
     await dao.deleteCourse(courseId);
 
-    res.status(200).send(`Course with ID ${courseId} deleted successfully`);
+    res
+      .status(200)
+      .json({ message: `Course with ID ${courseId} deleted successfully` });
   } catch (err) {
     console.error("Error deleting course:", err);
-    res.status(500).send(`Error - ${err.message}`);
+    res.status(500).json({ error: `Error - ${err.message}` });
   }
 };
 exports.assignProfessorToCourseHandler = async (req, res) => {
@@ -507,15 +592,19 @@ exports.getStudentResultsHandler = async (req, res) => {
   const studentId = req.params.student_id;
 
   if (!studentId) {
-    return res.status(400).send("Error - student_id is a mandatory field");
+    return res
+      .status(400)
+      .json({ error: "Error - student_id is a mandatory field" });
   }
   if (userType === "student") {
     const studentIdToken = await security.getIdFromToken(tokenString);
     if (!studentIdToken) {
-      return res.status(500).send("Failed to extract student ID");
+      return res.status(500).json({ error: "Failed to extract student ID" });
     }
     if (studentId != studentIdToken) {
-      return res.status(401).send("You cannot read other students' results");
+      return res
+        .status(401)
+        .json({ error: "You cannot read other students' results" });
     }
   }
   try {
@@ -524,6 +613,8 @@ exports.getStudentResultsHandler = async (req, res) => {
     res.json(studentResults);
   } catch (err) {
     console.error("Failed to retrieve all student results:", err);
-    return res.status(500).send("Failed to retrieve all student results");
+    return res
+      .status(500)
+      .json({ error: "Failed to retrieve all student results" });
   }
 };

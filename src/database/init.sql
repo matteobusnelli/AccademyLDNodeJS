@@ -54,12 +54,6 @@ CREATE TABLE users (
 INSERT INTO users (username, hashpassword, salt, "type")
 VALUES ('admin', '4b0b373f240e6e79e99787b71c9b27de73baeb244cd81f73e409878c52024f78', 'qwertyuiop', 'admin');
 
-INSERT INTO users (username, hashpassword, salt, "type")
-VALUES ('P123456', '171219afcb393c1b2b2f91b8367039942d1867083c00cba0454af7c1f45d62c7', 'asdfghjkl', 'professor');
-
-INSERT INTO users (username, hashpassword, salt, "type")
-VALUES ('S123456', 'fcd02ebe745d3b9b28c6048986dd73a3ad6637593b2e0d8179b674c1e9f0a59b', 'zxcvbnm', 'student');
-
 \c university_test;
 
 CREATE TABLE students(

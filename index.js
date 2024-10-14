@@ -32,6 +32,9 @@ app.use(passport.session());
 
 // ------------ ENDPOINTS ------------
 
+//endpoint to register a new user
+app.post("/register", middlewares.isAdmin, controllers.registrationHandler);
+
 //endpoint to handle login
 app.post("/login", controllers.loginHandler);
 

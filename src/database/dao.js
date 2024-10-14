@@ -1,8 +1,21 @@
 "use strict";
 const db = require("./postgres");
 
+exports.insertUserIntoDB = async (username, hashedPassword, salt, userType) => {
+  const query = `
+    insert into users (username, hashpassword, salt, type)
+    values ($1, $2, $3, $4)
+  `;
+  try {
+    await db.query(query, [username, hashedPassword, salt, userType]);
+  } catch (err) {
+    console.error("Error inserting user into DB:", err);
+    throw err;
+  }
+};
+
 //function that returns the user in base of its id
-exports.FetchUserFromDB = (id) => {
+exports.fetchUserFromDB = (id) => {
   return new Promise((resolve, reject) => {
     const query = `SELECT username, hashpassword, salt, type FROM users WHERE username = $1`;
 
