@@ -265,11 +265,9 @@ exports.newProfessorHandler = async (req, res) => {
 
     const found = await dao.isProfessorRegistered(prof.professor_id);
     if (found) {
-      return res
-        .status(409)
-        .json({
-          error: `Error - professor with id ${prof.professor_id} already exists`,
-        });
+      return res.status(409).json({
+        error: `Error - professor with id ${prof.professor_id} already exists`,
+      });
     }
 
     const createdProfessor = await dao.createProfessor(prof);
@@ -307,11 +305,9 @@ exports.getProfessorByIdHandler = async (req, res) => {
     }
     const professor = await dao.getProfessorById(professorId);
     if (!professor) {
-      return res
-        .status(404)
-        .json({
-          error: `Error - professor with id ${professorId} does not exist`,
-        });
+      return res.status(404).json({
+        error: `Error - professor with id ${professorId} does not exist`,
+      });
     }
 
     res.status(200).json(professor);
@@ -364,11 +360,9 @@ exports.newCourseHandler = async (req, res) => {
 
     const found = await dao.isCourseRegistered(course.course_id);
     if (found) {
-      return res
-        .status(409)
-        .json({
-          error: `Error - course with id ${course.course_id} already exists`,
-        });
+      return res.status(409).json({
+        error: `Error - course with id ${course.course_id} already exists`,
+      });
     }
 
     const createdCourse = await dao.createCourse(course);
@@ -616,5 +610,17 @@ exports.getStudentResultsHandler = async (req, res) => {
     return res
       .status(500)
       .json({ error: "Failed to retrieve all student results" });
+  }
+};
+exports.getStudentStatisticsHandler = async (req, res) => {
+  try {
+    const studentStatistics = await dao.getStudentStatistics();
+    res.header("Content-Type", "application/json");
+    res.json(studentStatistics);
+  } catch (err) {
+    console.error("Failed to retrieve all students statistics:", err);
+    return res
+      .status(500)
+      .json({ error: "Failed to retrieve all students statistics" });
   }
 };

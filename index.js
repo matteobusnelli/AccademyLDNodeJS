@@ -141,6 +141,13 @@ app.get(
   controllers.getStudentResultsHandler
 );
 
+//endpoint to get all students' statistics
+app.get(
+  "/getstudentstatistics",
+  middlewares.isAdminOrProfessor,
+  controllers.getStudentStatisticsHandler
+);
+
 // Activate the server
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);

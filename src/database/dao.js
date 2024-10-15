@@ -350,3 +350,39 @@ exports.getStudentResults = async (studentId) => {
     throw err;
   }
 };
+exports.getStudentStatistics = async () => {
+  const studentsStatistics = [];
+  const query = `
+    WITH student_averages AS (
+					SELECT s.student_id,
+						s."name",
+						s.surname,
+						AVG(sc."result") AS avg_result
+					FROM students s
+					INNER JOIN students_courses sc ON s.student_id = sc.student_id
+					GROUP BY s.student_id, s."name", s.surname
+			  )
+			  SELECT student_id,
+					"name",
+					surname,
+					round(avg_result, 3) as avg_result,
+					RANK() OVER (ORDER BY avg_result DESC) AS rank
+			  FROM student_averages;`;
+
+  try {
+    const res = await db.query(query);
+    for (let row of res.rows) {
+      studentsStatistics.push({
+        studentId: row.student_id,
+        name: row.name,
+        surname: row.surname,
+        avgResult: row.avg_result,
+        rank: row.rank,
+      });
+    }
+    return studentsStatistics;
+  } catch (err) {
+    console.error("Error executing query:", err);
+    throw err;
+  }
+};
