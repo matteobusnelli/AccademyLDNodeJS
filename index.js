@@ -121,14 +121,14 @@ app.delete(
 );
 
 //endpoint to assign a professor to a specific course
-app.put(
+app.patch(
   "/assignprofessor",
   middlewares.isAdmin,
   controllers.assignProfessorToCourseHandler
 );
 
 //endpoint to let a professor to assign a new valuation to a student
-app.put(
+app.patch(
   "/assignstudentresult",
   middlewares.isAdminOrProfessor,
   controllers.assignStudentResultHandler
