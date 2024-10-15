@@ -71,25 +71,27 @@ exports.getStudentById = async (studentId) => {
     console.error("Error retrieving student by ID:", err);
   }
 };
-exports.fetchStudents = async () => {
-  const query = "select * from students";
+exports.fetchStudents = async (limit, offset) => {
+  const query = "select * from students limit $1 offset $2";
   try {
-    const result = await db.query(query);
+    const result = await db.query(query, [limit, offset]);
     return result.rows;
   } catch (err) {
     console.error("Error retrieving all students:", err);
   }
 };
-exports.fetchProfessorStudents = async (professorId) => {
+exports.fetchProfessorStudents = async (professorId, limit, offset) => {
   const query = `
     select s.*
     from students s
     inner join students_courses sc on sc.student_id = s.student_id
     inner join courses c on c.course_id = sc.course_id and c.professor_id = $1
+    limit $2
+    offset $3
   `;
 
   try {
-    const result = await db.query(query, [professorId]);
+    const result = await db.query(query, [professorId, limit, offset]);
 
     const students = result.rows.map((row) => ({
       student_id: row.student_id,
@@ -204,10 +206,10 @@ exports.getProfessorById = async (professorId) => {
     console.error("Error retrieving professor by ID:", err);
   }
 };
-exports.fetchProfessors = async () => {
-  const query = "select * from professors";
+exports.fetchProfessors = async (limit, offset) => {
+  const query = "select * from professors limit $1 offset $2";
   try {
-    const result = await db.query(query);
+    const result = await db.query(query, [limit, offset]);
     return result.rows;
   } catch (err) {
     console.error("Error retrieving all professors:", err);
@@ -254,10 +256,10 @@ exports.getCourseById = async (courseId) => {
     console.error("Error retrieving course by ID:", err);
   }
 };
-exports.fetchCourses = async () => {
-  const query = "select * from courses";
+exports.fetchCourses = async (limit, offset) => {
+  const query = "select * from courses limit $1 offset $2";
   try {
-    const result = await db.query(query);
+    const result = await db.query(query, [limit, offset]);
     return result.rows;
   } catch (err) {
     console.error("Error retrieving all courses:", err);
@@ -350,7 +352,7 @@ exports.getStudentResults = async (studentId) => {
     throw err;
   }
 };
-exports.getStudentStatistics = async () => {
+exports.getStudentStatistics = async (limit, offset) => {
   const studentsStatistics = [];
   const query = `
     WITH student_averages AS (
@@ -361,6 +363,8 @@ exports.getStudentStatistics = async () => {
 					FROM students s
 					INNER JOIN students_courses sc ON s.student_id = sc.student_id
 					GROUP BY s.student_id, s."name", s.surname
+          LIMIT $1
+          OFFSET $2
 			  )
 			  SELECT student_id,
 					"name",
@@ -370,7 +374,7 @@ exports.getStudentStatistics = async () => {
 			  FROM student_averages;`;
 
   try {
-    const res = await db.query(query);
+    const res = await db.query(query, [limit, offset]);
     for (let row of res.rows) {
       studentsStatistics.push({
         studentId: row.student_id,

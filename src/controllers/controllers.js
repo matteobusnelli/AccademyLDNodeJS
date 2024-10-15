@@ -131,7 +131,10 @@ exports.getStudentByIdHandler = async (req, res) => {
 };
 exports.getAllStudentsHandler = async (req, res) => {
   try {
-    const students = await dao.fetchStudents();
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = parseInt(req.query.offset, 10) || 0;
+
+    const students = await dao.fetchStudents(limit, offset);
     res.status(200).json(students);
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve student" });
@@ -141,6 +144,8 @@ exports.getAllProfessorStudentsHandler = async (req, res) => {
   try {
     const tokenString = req.headers.authorization.split("Bearer ")[1]; // Already checked by middleware
     const userType = await security.verifyToken(tokenString); // Already checked by middleware
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = parseInt(req.query.offset, 10) || 0;
 
     let students;
     if (userType === "professor") {
@@ -150,7 +155,7 @@ exports.getAllProfessorStudentsHandler = async (req, res) => {
           .status(500)
           .json({ error: "Failed to extract professor ID" });
       }
-      students = await dao.fetchProfessorStudents(professorId);
+      students = await dao.fetchProfessorStudents(professorId, limit, offset);
     } else {
       students = await dao.fetchStudents();
     }
@@ -316,8 +321,11 @@ exports.getProfessorByIdHandler = async (req, res) => {
   }
 };
 exports.getAllProfessorsHandler = async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const offset = parseInt(req.query.offset, 10) || 0;
+
   try {
-    const professors = await dao.fetchProfessors();
+    const professors = await dao.fetchProfessors(limit, offset);
     res.status(200).json(professors);
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve professors" });
@@ -396,7 +404,9 @@ exports.getCourseByIdHandler = async (req, res) => {
 };
 exports.getAllCoursesHandler = async (req, res) => {
   try {
-    const courses = await dao.fetchCourses();
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const courses = await dao.fetchCourses(limit, offset);
     res.status(200).json(courses);
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve courses" });
@@ -614,7 +624,9 @@ exports.getStudentResultsHandler = async (req, res) => {
 };
 exports.getStudentStatisticsHandler = async (req, res) => {
   try {
-    const studentStatistics = await dao.getStudentStatistics();
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const studentStatistics = await dao.getStudentStatistics(limit, offset);
     res.header("Content-Type", "application/json");
     res.json(studentStatistics);
   } catch (err) {
