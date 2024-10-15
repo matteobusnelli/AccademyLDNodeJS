@@ -386,3 +386,48 @@ exports.getStudentStatistics = async () => {
     throw err;
   }
 };
+exports.checkIsProfessorCourse = async (professorId, courseId) => {
+  const query = `
+    select exists (select 1 FROM courses WHERE professor_id = $1 and course_id = $2)
+  `;
+
+  try {
+    const result = await db.query(query, [professorId, courseId]);
+    return result.rows[0].exists;
+  } catch (err) {
+    console.error("Error executing query:", err);
+    throw new Error(`Error executing query: ${err.message}`);
+  }
+};
+exports.getCourseBestStudents = async (courseId) => {
+  const studentsStatistics = [];
+  const query = `
+    SELECT 
+				sc.student_id,
+				s."name",
+				s.surname,
+				sc."result",
+				rank() OVER (PARTITION BY sc.course_id ORDER BY sc."result" DESC) AS rank_in_course
+			  FROM students_courses sc
+			  inner JOIN students s ON sc.student_id = s.student_id
+			  inner JOIN courses c ON sc.course_id = c.course_id
+			  where c.course_id = $1
+			  ORDER BY sc.course_id, rank_in_course`;
+
+  try {
+    const res = await db.query(query, [courseId]);
+    for (let row of res.rows) {
+      studentsStatistics.push({
+        studentId: row.student_id,
+        name: row.name,
+        surname: row.surname,
+        avgResult: row.avg_result,
+        rank: row.rank,
+      });
+    }
+    return studentsStatistics;
+  } catch (err) {
+    console.error("Error executing query:", err);
+    throw err;
+  }
+};

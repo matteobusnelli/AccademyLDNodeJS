@@ -147,7 +147,12 @@ app.get(
   middlewares.isAdminOrProfessor,
   controllers.getStudentStatisticsHandler
 );
-
+//endpoint to get students rank of a course
+app.get(
+  "/getcoursebeststudents/:course_id",
+  middlewares.isAdminOrProfessor,
+  controllers.getCourseBestStudentsHandler
+);
 // Activate the server
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);

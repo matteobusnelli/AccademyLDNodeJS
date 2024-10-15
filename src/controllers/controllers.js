@@ -624,3 +624,53 @@ exports.getStudentStatisticsHandler = async (req, res) => {
       .json({ error: "Failed to retrieve all students statistics" });
   }
 };
+exports.getCourseBestStudentsHandler = async (req, res) => {
+  const tokenString = req.headers.authorization.split("Bearer ")[1]; // Already checked by middleware
+  const userType = await security.verifyToken(tokenString); // Already checked by middleware
+  const courseId = req.params.course_id;
+
+  if (!courseId) {
+    return res
+      .status(400)
+      .json({ error: "Error - course_id is a mandatory field" });
+  }
+  const isCourseRegistered = await dao.isCourseRegistered(courseId);
+  if (!isCourseRegistered) {
+    return res.status(404).json({
+      error: `Error - course with id ${courseId} not found`,
+    });
+  }
+
+  if (userType === "professor") {
+    let professorId;
+    try {
+      professorId = await security.getIdFromToken(tokenString);
+    } catch (err) {
+      return res.status(500).json({ error: "Failed to extract professor id" });
+    }
+    let ok;
+    try {
+      ok = await dao.checkIsProfessorCourse(professorId, courseId);
+    } catch (err) {
+      return res.status(500).json({
+        error: `Failed to check professor course: ${err.message}`,
+      });
+    }
+    if (!ok) {
+      return res.status(401).json({
+        error: `You're not allowed to read statistics of other courses.`,
+      });
+    }
+  }
+
+  try {
+    const studentResults = await dao.getCourseBestStudents(courseId);
+    res.header("Content-Type", "application/json");
+    res.json(studentResults);
+  } catch (err) {
+    console.error("Failed to retrieve all student results:", err);
+    return res
+      .status(500)
+      .json({ error: "Failed to retrieve all student results" });
+  }
+};
