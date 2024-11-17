@@ -1,5 +1,11 @@
 "use strict";
-exports.isValidDateFormat = (dateString) => {
-  const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
-  return dateFormat.test(dateString);
+
+const { validationResult } = require("express-validator");
+
+exports.handleValidationErrors = (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 };
+
